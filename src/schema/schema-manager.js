@@ -1,6 +1,4 @@
-/**
- * Schema Manager - handles database schema and metadata
- */
+
 export class SchemaManager {
     constructor(storageEngine) {
         this.storageEngine = storageEngine;
@@ -16,10 +14,8 @@ export class SchemaManager {
         }
 
         try {
-            // Try to load existing metadata
             await this.loadMetadata();
         } catch (error) {
-            // Create new metadata file if it doesn't exist
             console.log('Creating new metadata file:', error.message);
             await this.createMetadataFile();
         }
@@ -31,7 +27,6 @@ export class SchemaManager {
     async createMetadataFile() {
         this.metadataFileId = await this.storageEngine.createTableFile('_metadata');
         
-        // Initialize empty metadata
         const metadata = {
             version: 1,
             tables: {},
@@ -52,12 +47,10 @@ export class SchemaManager {
             if (data.length > 0) {
                 const metadata = JSON.parse(data.toString());
                 
-                // Load tables
                 for (const [tableName, tableInfo] of Object.entries(metadata.tables)) {
                     this.tables.set(tableName, tableInfo);
                 }
 
-                // Load indexes
                 for (const [indexName, indexInfo] of Object.entries(metadata.indexes)) {
                     this.indexes.set(indexName, indexInfo);
                 }
@@ -88,13 +81,10 @@ export class SchemaManager {
             throw new Error(`Table '${tableName}' already exists`);
         }
 
-        // Validate columns
         this.validateColumns(columns);
 
-        // Create table file
         const fileId = await this.storageEngine.createTableFile(tableName);
 
-        // Create table metadata
         const table = {
             name: tableName,
             fileId,
@@ -104,10 +94,8 @@ export class SchemaManager {
             constraints: this.extractConstraints(columns)
         };
 
-        // Add to tables map
         this.tables.set(tableName, table);
 
-        // Create primary key index if specified
         const primaryKeyColumns = columns
             .filter(col => col.constraints.some(c => c.type === 'PRIMARY_KEY'))
             .map(col => col.name);
@@ -116,7 +104,6 @@ export class SchemaManager {
             await this.createIndex(`pk_${tableName}`, tableName, primaryKeyColumns, transaction, true);
         }
 
-        // Save metadata
         await this.saveMetadata();
 
         console.log(`Table '${tableName}' created successfully`);
@@ -129,7 +116,6 @@ export class SchemaManager {
             throw new Error(`Table '${tableName}' does not exist`);
         }
 
-        // Drop all indexes for this table
         const tableIndexes = Array.from(this.indexes.values())
             .filter(index => index.tableName === tableName);
 
@@ -137,13 +123,10 @@ export class SchemaManager {
             await this.dropIndex(index.name, transaction);
         }
 
-        // Delete table file
         await this.storageEngine.deleteFile(`${tableName}.tbl`);
 
-        // Remove from tables map
         this.tables.delete(tableName);
 
-        // Save metadata
         await this.saveMetadata();
 
         console.log(`Table '${tableName}' dropped successfully`);
@@ -159,7 +142,6 @@ export class SchemaManager {
             throw new Error(`Table '${tableName}' does not exist`);
         }
 
-        // Validate columns exist in table
         for (const columnName of columns) {
             const column = table.columns.find(col => col.name === columnName);
             if (!column) {
@@ -167,10 +149,8 @@ export class SchemaManager {
             }
         }
 
-        // Create index file
         const fileId = await this.storageEngine.createIndexFile(indexName);
 
-        // Create index metadata
         const index = {
             name: indexName,
             tableName,
@@ -181,10 +161,8 @@ export class SchemaManager {
             createdAt: new Date().toISOString()
         };
 
-        // Add to indexes map
         this.indexes.set(indexName, index);
 
-        // Save metadata
         await this.saveMetadata();
 
         console.log(`Index '${indexName}' created successfully`);
@@ -197,13 +175,10 @@ export class SchemaManager {
             throw new Error(`Index '${indexName}' does not exist`);
         }
 
-        // Delete index file
         await this.storageEngine.deleteFile(`${indexName}.idx`);
 
-        // Remove from indexes map
         this.indexes.delete(indexName);
 
-        // Save metadata
         await this.saveMetadata();
 
         console.log(`Index '${indexName}' dropped successfully`);
@@ -281,7 +256,6 @@ export class SchemaManager {
         return defaultConstraint ? defaultConstraint.value : null;
     }
 
-    // Getter methods
     async getTable(tableName) {
         return this.tables.get(tableName) || null;
     }
@@ -320,5 +294,14 @@ export class SchemaManager {
     async getTableConstraints(tableName) {
         const table = this.tables.get(tableName);
         return table ? table.constraints : [];
+    }
+
+    async getAllTables() {
+        return Array.from(this.tables.values()).map(table => ({
+            name: table.name,
+            columns: table.columns,
+            constraints: table.constraints,
+            rowCount: 0
+        }));
     }
 }

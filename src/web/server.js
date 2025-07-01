@@ -1,7 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { DatabaseEngine } from '../index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Web Server - HTTP API for the database
@@ -19,6 +24,9 @@ export class WebServer {
         this.app.use(morgan('combined'));
         this.app.use(express.json({ limit: '10mb' }));
         this.app.use(express.urlencoded({ extended: true }));
+        
+        // Serve static files from public directory
+        this.app.use(express.static(path.join(__dirname, 'public')));
 
         // Error handling middleware
         this.app.use((error, req, res, next) => {
@@ -220,8 +228,158 @@ export class WebServer {
             }
         });
 
+        // List all tables
+        this.app.get('/tables', async (req, res) => {
+            try {
+                const tables = await this.database.schemaManager.getAllTables();
+                res.json({
+                    success: true,
+                    data: tables
+                });
+            } catch (error) {
+                res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+
+        // Get table information
+        this.app.get('/tables/:tableName', async (req, res) => {
+            try {
+                const { tableName } = req.params;
+                const table = await this.database.schema.getTable(tableName);
+                if (!table) {
+                    return res.status(404).json({
+                        success: false,
+                        error: 'Table not found'
+                    });
+                }
+                res.json({
+                    success: true,
+                    data: table
+                });
+            } catch (error) {
+                res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+
+        // Get table data with pagination
+        this.app.get('/tables/:tableName/data', async (req, res) => {
+            try {
+                const { tableName } = req.params;
+                const { limit = 50, offset = 0 } = req.query;
+                
+                const sql = `SELECT * FROM ${tableName} LIMIT ${limit} OFFSET ${offset}`;
+                const result = await this.database.execute(sql);
+                
+                res.json({
+                    success: true,
+                    data: result.rows || [],
+                    meta: {
+                        limit: parseInt(limit),
+                        offset: parseInt(offset),
+                        count: result.rows?.length || 0
+                    }
+                });
+            } catch (error) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+
+        // Create a new table
+        this.app.post('/tables', async (req, res) => {
+            try {
+                const { sql } = req.body;
+                
+                if (!sql?.toLowerCase().includes('create table')) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'CREATE TABLE SQL statement is required'
+                    });
+                }
+
+                const result = await this.database.execute(sql);
+                res.json({
+                    success: true,
+                    data: result,
+                    message: 'Table created successfully'
+                });
+            } catch (error) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+
+        // Drop a table
+        this.app.delete('/tables/:tableName', async (req, res) => {
+            try {
+                const { tableName } = req.params;
+                const sql = `DROP TABLE ${tableName}`;
+                
+                const result = await this.database.execute(sql);
+                res.json({
+                    success: true,
+                    data: result,
+                    message: `Table '${tableName}' dropped successfully`
+                });
+            } catch (error) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+
+        // Export table data
+        this.app.get('/tables/:tableName/export', async (req, res) => {
+            try {
+                const { tableName } = req.params;
+                const { format = 'json' } = req.query;
+                
+                const sql = `SELECT * FROM ${tableName}`;
+                const result = await this.database.execute(sql);
+                
+                if (format === 'csv') {
+                    // Convert to CSV
+                    const rows = result.rows || [];
+                    if (rows.length === 0) {
+                        return res.json({ success: true, data: '' });
+                    }
+                    
+                    const headers = Object.keys(rows[0]);
+                    const csvData = [
+                        headers.join(','),
+                        ...rows.map(row => headers.map(h => `"${row[h] || ''}"`).join(','))
+                    ].join('\n');
+                    
+                    res.setHeader('Content-Type', 'text/csv');
+                    res.setHeader('Content-Disposition', `attachment; filename="${tableName}.csv"`);
+                    res.send(csvData);
+                } else {
+                    res.json({
+                        success: true,
+                        data: result.rows || []
+                    });
+                }
+            } catch (error) {
+                res.status(400).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+
         // API documentation
-        this.app.get('/', (req, res) => {
+        this.app.get('/api', (req, res) => {
             res.json({
                 name: 'Custom Database Engine API',
                 version: '1.0.0',
@@ -230,6 +388,12 @@ export class WebServer {
                     'POST /sql': 'Execute SQL statement',
                     'GET /schema': 'Get database schema',
                     'GET /stats': 'Get database statistics',
+                    'GET /tables': 'List all tables',
+                    'GET /tables/:name': 'Get table information',
+                    'GET /tables/:name/data': 'Get table data',
+                    'POST /tables': 'Create a new table',
+                    'DELETE /tables/:name': 'Drop a table',
+                    'GET /tables/:name/export': 'Export table data',
                     'POST /transactions': 'Start a new transaction',
                     'POST /transactions/:id/commit': 'Commit a transaction',
                     'POST /transactions/:id/rollback': 'Rollback a transaction',
@@ -237,6 +401,11 @@ export class WebServer {
                 },
                 documentation: 'https://github.com/your-repo/custom-database-engine'
             });
+        });
+
+        // Serve main UI
+        this.app.get('/', (req, res) => {
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
         });
 
         // 404 handler
@@ -269,7 +438,7 @@ if (process.argv[1].endsWith('server.js')) {
     async function startWebServer() {
         try {
             const engine = new DatabaseEngine({
-                dbPath: './data',
+                dbPath: './demo-data',
                 mode: 'web'
             });
             
