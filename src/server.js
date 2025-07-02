@@ -49,7 +49,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
 app.get('/', async (req, res) => {
   try {
     await ensureDbInitialized();
