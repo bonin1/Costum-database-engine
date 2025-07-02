@@ -6,7 +6,6 @@ const DatabaseEngine = require('./DatabaseEngine');
 const app = express();
 const db = new DatabaseEngine('./databases');
 
-// Apply security middleware first
 const securityManager = db.getSecurityManager();
 app.use(securityManager.getSecurityHeaders());
 app.use(securityManager.getRateLimiter());
