@@ -28,7 +28,6 @@ class DatabaseEngine {
   }
 
   async switchDatabase(databaseName) {
-    // Import StorageEngine here to avoid circular dependencies
     const StorageEngine = require('./storage/StorageEngine');
     
     // Validate database name
