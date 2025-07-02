@@ -30,7 +30,6 @@ class DatabaseEngine {
   async switchDatabase(databaseName) {
     const StorageEngine = require('./storage/StorageEngine');
     
-    // Validate database name
     const sanitizedName = this.security.sanitizeInput(databaseName, 'identifier');
     
     // Create database if it doesn't exist
