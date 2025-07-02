@@ -41,7 +41,6 @@ async function ensureDbInitialized(databaseName = currentDatabase) {
   }
 }
 
-// Database middleware to handle database switching
 app.use((req, res, next) => {
   if (req.query.db && req.query.db !== currentDatabase) {
     currentDatabase = req.query.db;
