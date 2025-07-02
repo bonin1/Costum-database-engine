@@ -32,7 +32,6 @@ class DatabaseEngine {
     
     const sanitizedName = this.security.sanitizeInput(databaseName, 'identifier');
     
-    // Create database if it doesn't exist
     const databases = await this.databaseManager.listDatabases();
     if (!databases.find(db => db.name === sanitizedName)) {
       await this.databaseManager.createDatabase(sanitizedName);
