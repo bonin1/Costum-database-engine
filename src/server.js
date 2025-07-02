@@ -408,7 +408,6 @@ app.post('/delete-database', async (req, res) => {
   }
 });
 
-// Security report route
 app.get('/security', async (req, res) => {
   try {
     const report = await db.getSecurityReport();
