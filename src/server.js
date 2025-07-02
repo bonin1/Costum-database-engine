@@ -417,7 +417,6 @@ app.get('/security', async (req, res) => {
   }
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).render('error', { error: 'Something went wrong!' });
