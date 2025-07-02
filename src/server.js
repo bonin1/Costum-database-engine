@@ -225,7 +225,6 @@ app.post('/edit-row/:tableName/:rowId', async (req, res) => {
     const { tableName, rowId } = req.params;
     const { group, ...updates } = req.body;
     
-    // Remove empty fields and system fields
     delete updates.id;
     delete updates.created;
     delete updates.updated;
