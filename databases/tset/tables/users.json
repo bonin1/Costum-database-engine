@@ -1,0 +1,26 @@
+{
+  "rows": [
+    {
+      "id": "7329887f-0393-4872-8068-681db9fef02b",
+      "name": "ddas",
+      "email": "das",
+      "age": "31",
+      "created": "2025-07-02T21:12:30.940Z",
+      "group": "admins",
+      "updated": "2025-07-02T21:12:36.785Z"
+    },
+    {
+      "id": "6577b46b-d3c1-4777-94c7-4ec7dd539386",
+      "name": "das",
+      "email": "dsadas",
+      "age": "2",
+      "created": "2025-07-02T21:12:58.906Z",
+      "group": "admins"
+    }
+  ],
+  "groups": {
+    "admins": [
+      "6577b46b-d3c1-4777-94c7-4ec7dd539386"
+    ]
+  }
+}

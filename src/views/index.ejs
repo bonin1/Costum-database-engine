@@ -18,6 +18,12 @@
                 <a class="nav-link" href="/"><i class="bi bi-house"></i> Home</a>
                 <a class="nav-link" href="/create-table"><i class="bi bi-plus-circle"></i> Create Table</a>
                 <a class="nav-link" href="/query"><i class="bi bi-code"></i> SQL Query</a>
+                <a class="nav-link" href="/security"><i class="bi bi-shield-check"></i> Security</a>
+            </div>
+            <div class="navbar-nav">
+                <span class="navbar-text">
+                    <i class="bi bi-database"></i> Database: <strong><%= currentDatabase || 'default' %></strong>
+                </span>
             </div>
         </div>
     </nav>
@@ -25,8 +31,32 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar" aria-label="Database tables">
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar" aria-label="Database navigation">
                 <div class="position-sticky pt-3">
+                    <!-- Database Management -->
+                    <h6 class="px-3 mb-1 text-muted">
+                        Databases
+                        <button class="float-end btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createDatabaseModal">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </h6>
+                    <ul class="nav flex-column mb-3">
+                        <% if (typeof databases !== 'undefined' && databases) { %>
+                            <% databases.forEach(function(database) { %>
+                                <li class="nav-item">
+                                    <form method="POST" action="/switch-database" class="d-inline">
+                                        <input type="hidden" name="databaseName" value="<%= database.name %>">
+                                        <button type="submit" class="nav-link btn btn-link text-start w-100 <%= database.name === currentDatabase ? 'active' : '' %>" style="border: none;">
+                                            <i class="bi bi-database"></i>
+                                            <%= database.name %>
+                                            <span class="badge bg-secondary ms-1"><%= database.tables %></span>
+                                        </button>
+                                    </form>
+                                </li>
+                            <% }); %>
+                        <% } %>
+                    </ul>
+                    
                     <h6 class="px-3 mt-4 mb-1 text-muted">
                         Tables
                         <a class="float-end text-decoration-none" href="/create-table">
@@ -203,6 +233,31 @@
 <% } %>
 
             </main>
+        </div>
+    </div>
+
+    <!-- Create Database Modal -->
+    <div class="modal fade" id="createDatabaseModal" tabindex="-1" aria-labelledby="createDatabaseModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createDatabaseModalLabel">Create New Database</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="/create-database">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="databaseName" class="form-label">Database Name</label>
+                            <input type="text" class="form-control" id="databaseName" name="databaseName" required pattern="[a-zA-Z][a-zA-Z0-9_]*" title="Database name must start with a letter and contain only letters, numbers, and underscores">
+                            <div class="form-text">Database name must start with a letter and contain only letters, numbers, and underscores.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Database</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 

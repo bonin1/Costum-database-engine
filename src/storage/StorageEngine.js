@@ -305,6 +305,31 @@ class StorageEngine {
 
     return metadata.tables[tableName].groups || {};
   }
+
+  async getRows(tableName, groupName = null) {
+    const metadata = await this.loadMetadata();
+    
+    if (!metadata.tables[tableName]) {
+      throw new Error(`Table '${tableName}' does not exist`);
+    }
+
+    const tableFile = path.join(this.tablesDir, `${tableName}.json`);
+    const tableData = await fs.readJson(tableFile);
+
+    let rows = tableData.rows;
+
+    // Filter by group if specified
+    if (groupName) {
+      if (tableData.groups[groupName]) {
+        const groupRowIds = tableData.groups[groupName];
+        rows = rows.filter(row => groupRowIds.includes(row.id));
+      } else {
+        return [];
+      }
+    }
+
+    return rows;
+  }
 }
 
 module.exports = StorageEngine;

@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "databases": {
+    "main": {
+      "id": "3eab30a8-a664-4640-aa41-ea8ae013f130",
+      "name": "main",
+      "displayName": "main",
+      "created": "2025-07-02T21:03:29.748Z",
+      "lastAccessed": "2025-07-02T21:03:29.749Z",
+      "directory": "databases\\main",
+      "description": "",
+      "settings": {
+        "maxTableSize": 10000,
+        "maxTables": 100,
+        "enableLogging": true,
+        "enableBackup": true
+      }
+    },
+    "tset": {
+      "id": "3bc280e7-9942-4a7f-a5ae-4971b0a79ae7",
+      "name": "tset",
+      "displayName": "tset",
+      "created": "2025-07-02T21:03:43.476Z",
+      "lastAccessed": "2025-07-02T21:03:43.476Z",
+      "directory": "databases\\tset",
+      "description": "",
+      "settings": {
+        "maxTableSize": 10000,
+        "maxTables": 100,
+        "enableLogging": true,
+        "enableBackup": true
+      }
+    }
+  },
+  "created": "2025-07-02T21:02:33.753Z"
+}

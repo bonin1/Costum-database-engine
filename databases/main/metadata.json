@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "id": "3eab30a8-a664-4640-aa41-ea8ae013f130",
+  "name": "main",
+  "created": "2025-07-02T21:03:29.748Z",
+  "tables": {},
+  "indexes": {},
+  "lastTransactionId": 0,
+  "settings": {
+    "maxTableSize": 10000,
+    "maxTables": 100,
+    "enableLogging": true,
+    "enableBackup": true
+  }
+}

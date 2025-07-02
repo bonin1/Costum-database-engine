@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "created": "2025-07-02T20:10:38.848Z",
+  "databases": {},
+  "security": {
+    "passwordMinLength": 8,
+    "sessionTimeout": 86400000,
+    "maxLoginAttempts": 5,
+    "lockoutDuration": 900000,
+    "requireHttps": false,
+    "allowedOrigins": [
+      "http://localhost:3000"
+    ]
+  },
+  "features": {
+    "enableUserManagement": true,
+    "enableAuditLog": true,
+    "enableBackups": true,
+    "enableEncryption": false
+  },
+  "jwtSecret": "1735973f153b125abed7a2ea637df181164799f86189bde65d5b564e478ec78436a076ef0b96bc13c50bdd46f8db132b22bb5e6cab6faf9cb1ae06ef9e99a3e0"
+}

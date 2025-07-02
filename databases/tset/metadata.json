@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "id": "3bc280e7-9942-4a7f-a5ae-4971b0a79ae7",
+  "name": "tset",
+  "created": "2025-07-02T21:03:43.476Z",
+  "tables": {
+    "users": {
+      "name": "users",
+      "schema": {
+        "name": {
+          "type": "VARCHAR(255)"
+        },
+        "email": {
+          "type": "VARCHAR(255)"
+        },
+        "age": {
+          "type": "NUMBER"
+        }
+      },
+      "created": "2025-07-02T21:04:29.787Z",
+      "rowCount": 2,
+      "groups": {
+        "admins": {
+          "created": "2025-07-02T21:04:38.945Z",
+          "rowCount": 1
+        }
+      }
+    }
+  },
+  "indexes": {},
+  "lastTransactionId": 0,
+  "settings": {
+    "maxTableSize": 10000,
+    "maxTables": 100,
+    "enableLogging": true,
+    "enableBackup": true
+  }
+}

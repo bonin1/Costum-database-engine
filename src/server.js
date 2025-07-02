@@ -4,12 +4,29 @@ const path = require('path');
 const DatabaseEngine = require('./DatabaseEngine');
 
 const app = express();
-const db = new DatabaseEngine();
+const db = new DatabaseEngine('./databases');
 
-// Middleware
+// Apply security middleware first
+const securityManager = db.getSecurityManager();
+app.use(securityManager.getSecurityHeaders());
+app.use(securityManager.getRateLimiter());
+
+
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use((req, res, next) => {
+  const metadata = {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    method: req.method,
+    url: req.url
+  };
+  
+  securityManager.logSecurityEvent('http_request', metadata);
+  next();
+});
 
 // Set EJS as template engine
 app.set('view engine', 'ejs');
@@ -17,12 +34,24 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Initialize database
 let dbInitialized = false;
-async function ensureDbInitialized() {
-  if (!dbInitialized) {
-    await db.initialize();
+let currentDatabase = 'main';
+
+async function ensureDbInitialized(databaseName = currentDatabase) {
+  if (!dbInitialized || db.getCurrentDatabase() !== databaseName) {
+    await db.initialize(databaseName);
+    currentDatabase = databaseName;
     dbInitialized = true;
   }
 }
+
+// Database middleware to handle database switching
+app.use((req, res, next) => {
+  if (req.query.db && req.query.db !== currentDatabase) {
+    currentDatabase = req.query.db;
+    dbInitialized = false;
+  }
+  next();
+});
 
 // Routes
 app.get('/', async (req, res) => {
@@ -30,11 +59,14 @@ app.get('/', async (req, res) => {
     await ensureDbInitialized();
     const tables = await db.getAllTables();
     const tableNames = Object.keys(tables);
+    const databases = await db.listDatabases();
     
     res.render('index', { 
       title: 'Custom Database Engine',
       tables: tables,
-      tableNames: tableNames
+      tableNames: tableNames,
+      databases: databases,
+      currentDatabase: currentDatabase
     });
   } catch (error) {
     res.render('error', { error: error.message });
@@ -97,11 +129,14 @@ app.post('/create-table', async (req, res) => {
     columns.split(',').forEach(col => {
       const [name, type] = col.trim().split(':');
       if (name && type) {
-        schema[name.trim()] = { type: type.trim() };
+        schema[name.trim()] = type.trim();
       }
     });
     
-    await db.createTableDirect(tableName, schema);
+    await db.createTableDirect(tableName, schema, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
     res.redirect(`/table/${tableName}`);
   } catch (error) {
     res.render('error', { error: error.message });
@@ -146,8 +181,12 @@ app.post('/add-row/:tableName', async (req, res) => {
       }
     });
     
-    await db.insertRowDirect(tableName, data, group || null);
-    res.redirect(`/table/${tableName}${group ? `?group=${group}` : ''}`);
+    await db.insertRowDirect(tableName, data, group || null, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    const redirectUrl = group ? `/table/${tableName}?group=${group}` : `/table/${tableName}`;
+    res.redirect(redirectUrl);
   } catch (error) {
     res.render('error', { error: error.message });
   }
@@ -207,8 +246,12 @@ app.post('/edit-row/:tableName/:rowId', async (req, res) => {
       updates.group = group || null;
     }
     
-    await db.updateRowDirect(tableName, rowId, updates);
-    res.redirect(`/table/${tableName}${group ? `?group=${group}` : ''}`);
+    await db.updateRowDirect(tableName, rowId, updates, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    const redirectUrl = group ? `/table/${tableName}?group=${group}` : `/table/${tableName}`;
+    res.redirect(redirectUrl);
   } catch (error) {
     res.render('error', { error: error.message });
   }
@@ -220,8 +263,12 @@ app.post('/delete-row/:tableName/:rowId', async (req, res) => {
     const { tableName, rowId } = req.params;
     const { returnGroup } = req.body;
     
-    await db.deleteRowDirect(tableName, rowId);
-    res.redirect(`/table/${tableName}${returnGroup ? `?group=${returnGroup}` : ''}`);
+    await db.deleteRowDirect(tableName, rowId, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    const redirectUrl = returnGroup ? `/table/${tableName}?group=${returnGroup}` : `/table/${tableName}`;
+    res.redirect(redirectUrl);
   } catch (error) {
     res.render('error', { error: error.message });
   }
@@ -257,7 +304,10 @@ app.post('/create-group/:tableName', async (req, res) => {
       throw new Error('Group name is required');
     }
     
-    await db.createGroupDirect(tableName, groupName);
+    await db.createGroupDirect(tableName, groupName, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
     res.redirect(`/table/${tableName}?group=${groupName}`);
   } catch (error) {
     res.render('error', { error: error.message });
@@ -269,7 +319,10 @@ app.post('/delete-group/:tableName/:groupName', async (req, res) => {
     await ensureDbInitialized();
     const { tableName, groupName } = req.params;
     
-    await db.deleteGroupDirect(tableName, groupName);
+    await db.deleteGroupDirect(tableName, groupName, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
     res.redirect(`/table/${tableName}`);
   } catch (error) {
     res.render('error', { error: error.message });
@@ -300,7 +353,10 @@ app.post('/query', async (req, res) => {
       throw new Error('SQL query is required');
     }
     
-    const result = await db.executeQuery(sql);
+    const result = await db.executeQuery(sql, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
     
     res.render('query', {
       title: 'SQL Query Interface',
@@ -316,6 +372,57 @@ app.post('/query', async (req, res) => {
       result: { success: false, error: error.message },
       query: req.body.sql
     });
+  }
+});
+
+// Database management routes
+app.post('/switch-database', async (req, res) => {
+  try {
+    const { databaseName } = req.body;
+    
+    await db.switchDatabase(databaseName);
+    currentDatabase = databaseName;
+    dbInitialized = true;
+    
+    res.redirect(`/?db=${databaseName}`);
+  } catch (error) {
+    res.render('error', { error: error.message });
+  }
+});
+
+app.post('/create-database', async (req, res) => {
+  try {
+    const { databaseName } = req.body;
+    
+    await db.createDatabase(databaseName);
+    res.redirect('/');
+  } catch (error) {
+    res.render('error', { error: error.message });
+  }
+});
+
+app.post('/delete-database', async (req, res) => {
+  try {
+    const { databaseName } = req.body;
+    
+    if (databaseName === currentDatabase) {
+      throw new Error('Cannot delete the currently active database');
+    }
+    
+    await db.deleteDatabase(databaseName);
+    res.redirect('/');
+  } catch (error) {
+    res.render('error', { error: error.message });
+  }
+});
+
+// Security report route
+app.get('/security', async (req, res) => {
+  try {
+    const report = await db.getSecurityReport();
+    res.render('security', { report: report, title: 'Security Report' });
+  } catch (error) {
+    res.render('error', { error: error.message });
   }
 });
 

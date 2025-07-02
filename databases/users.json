@@ -1,0 +1,17 @@
+{
+  "admin": {
+    "id": "e9c2e98f-5dfb-4be1-9af2-856e0b806971",
+    "username": "admin",
+    "email": "admin@localhost",
+    "password": "$2a$12$g/kHinBH9ivvh3ogQdSkPOdeQMZgetLSSw.6qcHjRQ6f4xuVTEsfu",
+    "role": "admin",
+    "permissions": [
+      "*"
+    ],
+    "created": "2025-07-02T20:10:39.107Z",
+    "lastLogin": "2025-07-02T20:32:48.943Z",
+    "loginAttempts": 0,
+    "lockoutUntil": null,
+    "isActive": true
+  }
+}

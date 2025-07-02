@@ -6,7 +6,8 @@ const inquirer = require('inquirer');
 const DatabaseEngine = require('./DatabaseEngine');
 
 const program = new Command();
-const db = new DatabaseEngine();
+const db = new DatabaseEngine('./databases');
+let currentDatabase = 'main';
 
 program
   .name('customdb')
@@ -21,7 +22,8 @@ program
     console.log(chalk.blue.bold('🗄️  Custom Database Engine CLI'));
     console.log(chalk.gray('Type "help" for available commands or "exit" to quit\n'));
     
-    await db.initialize();
+    await db.initialize(currentDatabase);
+    console.log(chalk.green(`Connected to database: ${currentDatabase}\n`));
     
     while (true) {
       try {
@@ -44,6 +46,30 @@ program
           continue;
         }
 
+        // Database management commands
+        if (command.toLowerCase() === 'show databases') {
+          await showDatabases();
+          continue;
+        }
+
+        if (command.toLowerCase().startsWith('use ')) {
+          const dbName = command.substring(4).trim();
+          await switchDatabase(dbName);
+          continue;
+        }
+
+        if (command.toLowerCase().startsWith('create database ')) {
+          const dbName = command.substring(16).trim();
+          await createDatabase(dbName);
+          continue;
+        }
+
+        if (command.toLowerCase().startsWith('drop database ')) {
+          const dbName = command.substring(14).trim();
+          await dropDatabase(dbName);
+          continue;
+        }
+
         if (command.toLowerCase() === 'show tables') {
           await showTables();
           continue;
@@ -52,6 +78,11 @@ program
         if (command.toLowerCase().startsWith('describe ')) {
           const tableName = command.substring(9).trim();
           await describeTable(tableName);
+          continue;
+        }
+
+        if (command.toLowerCase() === 'security report') {
+          await showSecurityReport();
           continue;
         }
 
@@ -281,10 +312,103 @@ async function createSampleData() {
   await db.executeQuery("INSERT INTO products GROUP books (name, price, category) VALUES ('Database Design', 49.99, 'Books')");
 }
 
+// Database management functions
+async function showDatabases() {
+  try {
+    const databases = await db.listDatabases();
+    console.log(chalk.green('\n📊 Available Databases:'));
+    if (databases.length === 0) {
+      console.log(chalk.gray('  No databases found'));
+    } else {
+      databases.forEach(database => {
+        const marker = database.name === currentDatabase ? chalk.green('► ') : '  ';
+        const info = chalk.gray(`(${database.tables} tables, ${database.size})`);
+        console.log(`${marker}${chalk.blue(database.name)} ${info}`);
+      });
+    }
+    console.log('');
+  } catch (error) {
+    console.log(chalk.red(`Error listing databases: ${error.message}`));
+  }
+}
+
+async function switchDatabase(dbName) {
+  try {
+    await db.switchDatabase(dbName);
+    currentDatabase = dbName;
+    console.log(chalk.green(`✓ Switched to database: ${dbName}`));
+  } catch (error) {
+    console.log(chalk.red(`Error switching database: ${error.message}`));
+  }
+}
+
+async function createDatabase(dbName) {
+  try {
+    await db.createDatabase(dbName);
+    console.log(chalk.green(`✓ Database '${dbName}' created successfully`));
+  } catch (error) {
+    console.log(chalk.red(`Error creating database: ${error.message}`));
+  }
+}
+
+async function dropDatabase(dbName) {
+  try {
+    if (dbName === currentDatabase) {
+      console.log(chalk.red('Cannot delete the currently active database'));
+      return;
+    }
+    
+    const { confirm } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'confirm',
+        message: `Are you sure you want to delete database '${dbName}'? This action cannot be undone.`,
+        default: false
+      }
+    ]);
+    
+    if (confirm) {
+      await db.deleteDatabase(dbName);
+      console.log(chalk.green(`✓ Database '${dbName}' deleted successfully`));
+    } else {
+      console.log(chalk.gray('Database deletion cancelled'));
+    }
+  } catch (error) {
+    console.log(chalk.red(`Error deleting database: ${error.message}`));
+  }
+}
+
+async function showSecurityReport() {
+  try {
+    const report = await db.getSecurityReport();
+    console.log(chalk.green('\n🔒 Security Report:'));
+    console.log(chalk.blue(`  Total Queries: ${report.totalQueries}`));
+    console.log(chalk.blue(`  Suspicious Activities: ${report.suspiciousActivities}`));
+    console.log(chalk.blue(`  Blocked IPs: ${report.blockedIPs}`));
+    console.log(chalk.blue(`  Recent Security Events: ${report.recentEvents.length}`));
+    
+    if (report.recentEvents.length > 0) {
+      console.log(chalk.yellow('\n  Recent Security Events:'));
+      report.recentEvents.slice(0, 5).forEach(event => {
+        const time = new Date(event.timestamp).toLocaleString();
+        console.log(chalk.gray(`    ${time} - ${event.type}: ${event.details || 'N/A'}`));
+      });
+    }
+    console.log('');
+  } catch (error) {
+    console.log(chalk.red(`Error generating security report: ${error.message}`));
+  }
+}
+
 function showHelp() {
   console.log(chalk.green('\n📚 Available Commands:'));
+  console.log(chalk.blue('  Database Management:'));
+  console.log(chalk.white('    show databases       - List all databases'));
+  console.log(chalk.white('    use <database>       - Switch to database'));
+  console.log(chalk.white('    create database <n>  - Create new database'));
+  console.log(chalk.white('    drop database <n>    - Delete database (with confirmation)'));
   console.log(chalk.blue('  SQL Commands:'));
-  console.log(chalk.white('    CREATE TABLE <name> (col1 type1, col2 type2, ...)'));
+  console.log(chalk.white('    CREATE TABLE <n> (col1 type1, col2 type2, ...)'));
   console.log(chalk.white('    CREATE GROUP <group> IN <table>'));
   console.log(chalk.white('    INSERT INTO <table> [GROUP <group>] [(columns)] VALUES (values)'));
   console.log(chalk.white('    SELECT * FROM <table> [GROUP <group>] [WHERE conditions]'));
@@ -293,8 +417,11 @@ function showHelp() {
   console.log(chalk.white('    show tables          - List all tables'));
   console.log(chalk.white('    describe <table>     - Show table details'));
   console.log(chalk.white('    show groups <table>  - Show groups in table'));
+  console.log(chalk.white('    security report      - Show security report'));
   console.log(chalk.white('    exit                 - Exit the CLI'));
   console.log(chalk.blue('\n  Examples:'));
+  console.log(chalk.gray('    create database testdb'));
+  console.log(chalk.gray('    use testdb'));
   console.log(chalk.gray('    CREATE TABLE users (name VARCHAR(255), age NUMBER)'));
   console.log(chalk.gray('    CREATE GROUP admins IN users'));
   console.log(chalk.gray('    INSERT INTO users GROUP admins (name, age) VALUES (\'John\', 30)'));
