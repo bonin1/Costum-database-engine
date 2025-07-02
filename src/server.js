@@ -422,7 +422,6 @@ app.use((err, req, res, next) => {
   res.status(500).render('error', { error: 'Something went wrong!' });
 });
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).render('error', { error: 'Page not found' });
 });
