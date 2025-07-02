@@ -169,7 +169,6 @@ app.post('/add-row/:tableName', async (req, res) => {
     const { tableName } = req.params;
     const { group, ...data } = req.body;
     
-    // Remove empty fields
     Object.keys(data).forEach(key => {
       if (data[key] === '') {
         delete data[key];
