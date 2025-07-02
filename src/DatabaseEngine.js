@@ -37,7 +37,6 @@ class DatabaseEngine {
       await this.databaseManager.createDatabase(sanitizedName);
     }
     
-    // Switch to the database
     const dbPath = await this.databaseManager.getDatabasePath(sanitizedName);
     this.storage = new StorageEngine(dbPath);
     await this.storage.initialize();
