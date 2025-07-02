@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> | Custom Database Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-database"></i> Custom Database Engine
+            </a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/"><i class="bi bi-house"></i> Home</a>
+                <a class="nav-link" href="/create-table"><i class="bi bi-plus-circle"></i> Create Table</a>
+                <a class="nav-link" href="/query"><i class="bi bi-code"></i> SQL Query</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="bi bi-collection"></i> Create Group in <%= tableName %>
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/create-group/<%= tableName %>">
+                            <div class="mb-3">
+                                <label for="groupName" class="form-label">Group Name</label>
+                                <input type="text" class="form-control" id="groupName" name="groupName" required
+                                       pattern="[a-zA-Z_][a-zA-Z0-9_]*" 
+                                       title="Group name must start with a letter or underscore, followed by letters, numbers, or underscores">
+                                <div class="form-text">Group name must be unique within the table and follow naming conventions.</div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>About Groups:</strong> Groups help you organize data within a table. 
+                                You can query specific groups or move rows between groups. 
+                                Think of groups like folders for your data.
+                            </div>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="/table/<%= tableName %>" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-collection"></i> Create Group
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Examples -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-lightbulb"></i> Group Examples
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>User Groups:</h6>
+                                <ul>
+                                    <li><code>admins</code> - Administrative users</li>
+                                    <li><code>moderators</code> - Content moderators</li>
+                                    <li><code>users</code> - Regular users</li>
+                                    <li><code>guests</code> - Guest accounts</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Product Categories:</h6>
+                                <ul>
+                                    <li><code>electronics</code> - Electronic products</li>
+                                    <li><code>clothing</code> - Clothing items</li>
+                                    <li><code>books</code> - Book products</li>
+                                    <li><code>home</code> - Home & garden</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SQL Alternative -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-code"></i> SQL Alternative
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>You can also create groups using SQL in the <a href="/query">Query Interface</a>:</p>
+                        <div class="bg-dark text-light p-3 rounded">
+                            <code>CREATE GROUP group_name IN <%= tableName %>;</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

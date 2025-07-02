@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> | Custom Database Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-database"></i> Custom Database Engine
+            </a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/"><i class="bi bi-house"></i> Home</a>
+                <a class="nav-link" href="/create-table"><i class="bi bi-plus-circle"></i> Create Table</a>
+                <a class="nav-link" href="/query"><i class="bi bi-code"></i> SQL Query</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar" aria-label="Database tables">
+                <div class="position-sticky pt-3">
+                    <h6 class="px-3 mt-4 mb-1 text-muted">
+                        Tables
+                        <a class="float-end text-decoration-none" href="/create-table">
+                            <i class="bi bi-plus"></i>
+                        </a>
+                    </h6>
+                    <ul class="nav flex-column">
+                        <% if (typeof tables !== 'undefined' && tables) { %>
+                            <% Object.keys(tables).forEach(function(tableName) { %>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/table/<%= tableName %>">
+                                        <i class="bi bi-table"></i>
+                                        <%= tableName %>
+                                        <span class="badge bg-secondary ms-1"><%= tables[tableName].rowCount %></span>
+                                    </a>
+                                </li>
+                            <% }); %>
+                        <% } %>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2"><i class="bi bi-database"></i> <%= title %></h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <a href="/create-table" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Create Table
+                            </a>
+                            <a href="/query" class="btn btn-outline-primary">
+                                <i class="bi bi-code"></i> SQL Query
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+<% if (tableNames.length === 0) { %>
+    <div class="row">
+        <div class="col-md-8 mx-auto text-center">
+            <div class="card">
+                <div class="card-body py-5">
+                    <i class="bi bi-database display-1 text-muted"></i>
+                    <h3 class="mt-3">Welcome to Custom Database Engine</h3>
+                    <p class="text-muted mb-4">
+                        Get started by creating your first table or running SQL queries.
+                        This database engine supports tables, groups, and custom SQL-like syntax.
+                    </p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="/create-table" class="btn btn-primary btn-lg">
+                            <i class="bi bi-plus-circle"></i> Create Your First Table
+                        </a>
+                        <a href="/query" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-code"></i> Try SQL Query
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<% } else { %>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-table"></i> Database Tables
+                        <span class="badge bg-primary ms-2"><%= tableNames.length %></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <% tableNames.forEach(function(tableName) { %>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <h6 class="card-title d-flex align-items-center">
+                                            <i class="bi bi-table text-primary me-2"></i>
+                                            <%= tableName %>
+                                        </h6>
+                                        <div class="mb-3">
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-list-ol"></i> <%= tables[tableName].rowCount %> rows
+                                            </span>
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-collection"></i> <%= Object.keys(tables[tableName].groups || {}).length %> groups
+                                            </span>
+                                        </div>
+                                        <p class="card-text text-muted small">
+                                            Created: <%= new Date(tables[tableName].created).toLocaleDateString() %>
+                                        </p>
+                                        <div class="d-grid gap-2 d-md-flex">
+                                            <a href="/table/<%= tableName %>" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-eye"></i> View
+                                            </a>
+                                            <a href="/add-row/<%= tableName %>" class="btn btn-outline-success btn-sm">
+                                                <i class="bi bi-plus"></i> Add Row
+                                            </a>
+                                            <% if (Object.keys(tables[tableName].groups || {}).length > 0) { %>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                                        <i class="bi bi-collection"></i> Groups
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item" href="/table/<%= tableName %>">All Rows</a></li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <% Object.keys(tables[tableName].groups).forEach(function(groupName) { %>
+                                                            <li>
+                                                                <a class="dropdown-item" href="/table/<%= tableName %>?group=<%= groupName %>">
+                                                                    <i class="bi bi-collection"></i> <%= groupName %>
+                                                                    <span class="badge bg-secondary ms-1"><%= tables[tableName].groups[groupName].rowCount %></span>
+                                                                </a>
+                                                            </li>
+                                                        <% }); %>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li><a class="dropdown-item" href="/create-group/<%= tableName %>">
+                                                            <i class="bi bi-plus"></i> Create Group
+                                                        </a></li>
+                                                    </ul>
+                                                </div>
+                                            <% } else { %>
+                                                <a href="/create-group/<%= tableName %>" class="btn btn-outline-info btn-sm">
+                                                    <i class="bi bi-plus"></i> Create Group
+                                                </a>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightbulb"></i> Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6><i class="bi bi-plus-circle text-success"></i> Create</h6>
+                            <ul class="list-unstyled">
+                                <li><a href="/create-table" class="text-decoration-none">Create new table</a></li>
+                                <li><a href="/query" class="text-decoration-none">Run CREATE TABLE query</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><i class="bi bi-search text-info"></i> Query</h6>
+                            <ul class="list-unstyled">
+                                <li><a href="/query" class="text-decoration-none">SQL Query interface</a></li>
+                                <li><a href="/query" class="text-decoration-none">SELECT with conditions</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><i class="bi bi-collection text-warning"></i> Manage</h6>
+                            <ul class="list-unstyled">
+                                <li><a href="/query" class="text-decoration-none">Create groups</a></li>
+                                <li><a href="/query" class="text-decoration-none">Organize data</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<% } %>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

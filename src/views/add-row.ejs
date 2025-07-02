@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> | Custom Database Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-database"></i> Custom Database Engine
+            </a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/"><i class="bi bi-house"></i> Home</a>
+                <a class="nav-link" href="/create-table"><i class="bi bi-plus-circle"></i> Create Table</a>
+                <a class="nav-link" href="/query"><i class="bi bi-code"></i> SQL Query</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="bi bi-plus"></i> Add Row to <%= tableName %>
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/add-row/<%= tableName %>">
+                            <!-- Group Selection -->
+                            <% if (Object.keys(groups).length > 0) { %>
+                                <div class="mb-3">
+                                    <label for="group" class="form-label">Group (Optional)</label>
+                                    <select class="form-select" id="group" name="group">
+                                        <option value="">No Group</option>
+                                        <% Object.keys(groups).forEach(function(groupName) { %>
+                                            <option value="<%= groupName %>"><%= groupName %></option>
+                                        <% }); %>
+                                    </select>
+                                    <div class="form-text">Select a group to organize your data, or leave empty for ungrouped data.</div>
+                                </div>
+                            <% } %>
+
+                            <!-- Dynamic Fields based on schema -->
+                            <% if (tableInfo.schema && Object.keys(tableInfo.schema).length > 0) { %>
+                                <div class="row">
+                                    <% Object.entries(tableInfo.schema).forEach(function([columnName, columnInfo]) { %>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="<%= columnName %>" class="form-label">
+                                                <%= columnName.charAt(0).toUpperCase() + columnName.slice(1) %>
+                                                <span class="text-muted">(<%= columnInfo.type %>)</span>
+                                            </label>
+                                            <% if (columnInfo.type === 'BOOLEAN') { %>
+                                                <select class="form-select" id="<%= columnName %>" name="<%= columnName %>">
+                                                    <option value="">Choose...</option>
+                                                    <option value="true">True</option>
+                                                    <option value="false">False</option>
+                                                </select>
+                                            <% } else if (columnInfo.type === 'NUMBER') { %>
+                                                <input type="number" class="form-control" id="<%= columnName %>" name="<%= columnName %>" step="any">
+                                            <% } else if (columnInfo.type === 'TEXT') { %>
+                                                <textarea class="form-control" id="<%= columnName %>" name="<%= columnName %>" rows="3"></textarea>
+                                            <% } else { %>
+                                                <input type="text" class="form-control" id="<%= columnName %>" name="<%= columnName %>">
+                                            <% } %>
+                                        </div>
+                                    <% }); %>
+                                </div>
+                            <% } else { %>
+                                <!-- Generic fields when no schema is defined -->
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    This table has no predefined schema. You can add any fields below.
+                                </div>
+                                <div id="dynamic-fields">
+                                    <div class="row mb-3 field-row">
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control" name="field_name_0" placeholder="Field name">
+                                        </div>
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control" name="field_value_0" placeholder="Field value">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-outline-danger" onclick="removeField(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-secondary mb-3" onclick="addField()">
+                                    <i class="bi bi-plus"></i> Add Field
+                                </button>
+                            <% } %>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="/table/<%= tableName %>" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-plus"></i> Add Row
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- SQL Alternative -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-code"></i> SQL Alternative
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>You can also insert data using SQL in the <a href="/query">Query Interface</a>:</p>
+                        <div class="bg-dark text-light p-3 rounded">
+                            <code>
+                                INSERT INTO <%= tableName %> (column1, column2) VALUES ('value1', 'value2');<br>
+                                <% if (Object.keys(groups).length > 0) { %>
+                                    INSERT INTO <%= tableName %> GROUP group_name (column1, column2) VALUES ('value1', 'value2');
+                                <% } %>
+                            </code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let fieldCounter = 0;
+
+        function addField() {
+            fieldCounter++;
+            const container = document.getElementById('dynamic-fields');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'row mb-3 field-row';
+            fieldRow.innerHTML = `
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="field_name_${fieldCounter}" placeholder="Field name">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="field_value_${fieldCounter}" placeholder="Field value">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger" onclick="removeField(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(fieldRow);
+        }
+
+        function removeField(button) {
+            button.closest('.field-row').remove();
+        }
+
+        // Handle form submission for dynamic fields
+        document.querySelector('form').addEventListener('submit', function(e) {
+            <% if (!tableInfo.schema || Object.keys(tableInfo.schema).length === 0) { %>
+                // Convert dynamic fields to proper form data
+                const fieldRows = document.querySelectorAll('.field-row');
+                fieldRows.forEach(function(row) {
+                    const nameInput = row.querySelector('input[name^="field_name_"]');
+                    const valueInput = row.querySelector('input[name^="field_value_"]');
+                    
+                    if (nameInput.value && valueInput.value) {
+                        // Create hidden input with the field name as the name attribute
+                        const hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = nameInput.value;
+                        hiddenInput.value = valueInput.value;
+                        e.target.appendChild(hiddenInput);
+                    }
+                    
+                    // Remove the original inputs so they don't interfere
+                    nameInput.remove();
+                    valueInput.remove();
+                });
+            <% } %>
+        });
+    </script>
+</body>
+</html>

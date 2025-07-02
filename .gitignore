@@ -18,6 +18,9 @@ test-data/
 .env.development.local
 .env.test.local
 .env.production.local
+/test-database.js
+/start-server.js
+/simple-test.js
 
 # IDE and editor files
 .vscode/

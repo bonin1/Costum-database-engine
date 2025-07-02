@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> | Custom Database Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary" aria-label="Main navigation">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-database"></i> Custom Database Engine
+            </a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/"><i class="bi bi-house"></i> Home</a>
+                <a class="nav-link" href="/create-table"><i class="bi bi-plus-circle"></i> Create Table</a>
+                <a class="nav-link active" href="/query"><i class="bi bi-code"></i> SQL Query</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar" aria-label="Database tables">
+                <div class="position-sticky pt-3">
+                    <h6 class="px-3 mt-4 mb-1 text-muted">Tables</h6>
+                    <ul class="nav flex-column">
+                        <% Object.keys(tables).forEach(function(name) { %>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/table/<%= name %>">
+                                    <i class="bi bi-table"></i>
+                                    <%= name %>
+                                    <span class="badge bg-secondary ms-1"><%= tables[name].rowCount %></span>
+                                </a>
+                            </li>
+                        <% }); %>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="bi bi-code"></i> SQL Query Interface
+                    </h1>
+                </div>
+
+                <!-- Query Form -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Execute SQL Query</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/query">
+                            <div class="mb-3">
+                                <label for="sql" class="form-label">SQL Query</label>
+                                <textarea class="form-control font-monospace" id="sql" name="sql" rows="8" 
+                                          placeholder="Enter your SQL query here..."
+                                          style="font-size: 14px;"><%= typeof query !== 'undefined' ? query : '' %></textarea>
+                            </div>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-play-fill"></i> Execute Query
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="clearQuery()">
+                                    <i class="bi bi-trash"></i> Clear
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Query Results -->
+                <% if (typeof result !== 'undefined' && result) { %>
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <% if (result.success) { %>
+                                    <i class="bi bi-check-circle text-success"></i> Query Results
+                                <% } else { %>
+                                    <i class="bi bi-x-circle text-danger"></i> Query Error
+                                <% } %>
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <% if (result.success) { %>
+                                <% if (result.message) { %>
+                                    <div class="alert alert-success" role="alert">
+                                        <i class="bi bi-check-circle"></i> <%= result.message %>
+                                    </div>
+                                <% } %>
+                                <% if (result.data && Array.isArray(result.data) && result.data.length > 0) { %>
+                                    <p class="text-success">
+                                        <strong>Rows returned:</strong> <%= result.rowCount || result.data.length %>
+                                    </p>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <% Object.keys(result.data[0]).forEach(function(column) { %>
+                                                        <th><%= column.charAt(0).toUpperCase() + column.slice(1) %></th>
+                                                    <% }); %>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <% result.data.forEach(function(row) { %>
+                                                    <tr>
+                                                        <% Object.keys(row).forEach(function(column) { %>
+                                                            <td>
+                                                                <% if (column === 'id' && typeof row[column] === 'string' && row[column].length > 10) { %>
+                                                                    <code><%= row[column].substring(0, 8) %>...</code>
+                                                                <% } else if (column.includes('date') || column.includes('created') || column.includes('updated')) { %>
+                                                                    <%= new Date(row[column]).toLocaleString() %>
+                                                                <% } else { %>
+                                                                    <%= row[column] %>
+                                                                <% } %>
+                                                            </td>
+                                                        <% }); %>
+                                                    </tr>
+                                                <% }); %>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <% } else if (result.data && typeof result.data === 'object') { %>
+                                    <pre class="bg-light p-3 rounded"><%= JSON.stringify(result.data, null, 2) %></pre>
+                                <% } %>
+                            <% } else { %>
+                                <div class="alert alert-danger" role="alert">
+                                    <i class="bi bi-x-circle"></i> 
+                                    <strong>Error:</strong> <%= result.error || result.message %>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                <% } %>
+
+                <!-- SQL Examples -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-book"></i> SQL Examples
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Creating Tables & Groups</h6>
+                                <div class="bg-dark text-light p-3 rounded mb-3 small">
+                                    <code>
+                                        -- Create a table<br>
+                                        CREATE TABLE users (<br>
+                                        &nbsp;&nbsp;name VARCHAR(255),<br>
+                                        &nbsp;&nbsp;email VARCHAR(255),<br>
+                                        &nbsp;&nbsp;age NUMBER<br>
+                                        );<br><br>
+                                        -- Create a group<br>
+                                        CREATE GROUP admins IN users;
+                                    </code>
+                                </div>
+
+                                <h6>Inserting Data</h6>
+                                <div class="bg-dark text-light p-3 rounded mb-3 small">
+                                    <code>
+                                        -- Insert into table<br>
+                                        INSERT INTO users (name, email, age)<br>
+                                        VALUES ('John Doe', 'john@email.com', 30);<br><br>
+                                        -- Insert into group<br>
+                                        INSERT INTO users GROUP admins<br>
+                                        (name, email, age)<br>
+                                        VALUES ('Admin User', 'admin@email.com', 35);
+                                    </code>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Querying Data</h6>
+                                <div class="bg-dark text-light p-3 rounded mb-3 small">
+                                    <code>
+                                        -- Select all from table<br>
+                                        SELECT * FROM users;<br><br>
+                                        -- Select from specific group<br>
+                                        SELECT * FROM users GROUP admins;<br><br>
+                                        -- Select with conditions<br>
+                                        SELECT name, email FROM users<br>
+                                        WHERE age > 25;
+                                    </code>
+                                </div>
+
+                                <h6>Quick Actions</h6>
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuery('SELECT * FROM users;')">
+                                        Select All Users
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuery('CREATE TABLE sample (name VARCHAR(255), value NUMBER);')">
+                                        Create Sample Table
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuery('INSERT INTO sample (name, value) VALUES (\'test\', 123);')">
+                                        Insert Sample Data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function clearQuery() {
+            document.getElementById('sql').value = '';
+        }
+
+        function setQuery(query) {
+            document.getElementById('sql').value = query;
+        }
+
+        // Auto-resize textarea
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.getElementById('sql');
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            });
+        });
+    </script>
+</body>
+</html>
