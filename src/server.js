@@ -368,7 +368,6 @@ app.post('/query', async (req, res) => {
   }
 });
 
-// Database management routes
 app.post('/switch-database', async (req, res) => {
   try {
     const { databaseName } = req.body;
