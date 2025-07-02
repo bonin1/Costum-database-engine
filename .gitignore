@@ -22,6 +22,7 @@ test-data/
 /start-server.js
 /simple-test.js
 /test-*
+/databases
 
 # IDE and editor files
 .vscode/
