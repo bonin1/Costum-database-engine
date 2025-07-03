@@ -123,7 +123,6 @@ class DatabaseEngine {
       };
     }
 
-    // Filter columns
     const filteredRows = rows.map(row => {
       const filtered = {};
       columns.forEach(col => {
