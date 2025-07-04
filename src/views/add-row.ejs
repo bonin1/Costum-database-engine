@@ -55,19 +55,58 @@
                                             <label for="<%= columnName %>" class="form-label">
                                                 <%= columnName.charAt(0).toUpperCase() + columnName.slice(1) %>
                                                 <span class="text-muted">(<%= columnInfo.type %>)</span>
+                                                <% 
+                                                const badges = [];
+                                                if (columnInfo.primaryKey) badges.push('<span class="badge bg-primary">PK</span>');
+                                                if (columnInfo.unique) badges.push('<span class="badge bg-info">UNIQUE</span>');
+                                                if (columnInfo.notNull) badges.push('<span class="badge bg-warning">NOT NULL</span>');
+                                                if (columnInfo.autoIncrement) badges.push('<span class="badge bg-success">AUTO</span>');
+                                                if (columnInfo.foreignKey) badges.push('<span class="badge bg-secondary">FK</span>');
+                                                %>
+                                                <% if (badges.length > 0) { %>
+                                                    <%- badges.join(' ') %>
+                                                <% } %>
                                             </label>
-                                            <% if (columnInfo.type === 'BOOLEAN') { %>
-                                                <select class="form-select" id="<%= columnName %>" name="<%= columnName %>">
-                                                    <option value="">Choose...</option>
-                                                    <option value="true">True</option>
-                                                    <option value="false">False</option>
+                                            
+                                            <% if (columnInfo.autoIncrement) { %>
+                                                <input type="hidden" name="<%= columnName %>" value="">
+                                                <div class="form-control-plaintext text-muted">
+                                                    <i class="bi bi-arrow-up-circle"></i> Auto-generated value
+                                                </div>
+                                            <% } else if (columnInfo.type === 'BOOLEAN') { %>
+                                                <select class="form-select" id="<%= columnName %>" name="<%= columnName %>" 
+                                                        <%= columnInfo.notNull ? 'required' : '' %>>
+                                                    <% if (!columnInfo.notNull) { %>
+                                                        <option value="">Choose...</option>
+                                                    <% } %>
+                                                    <option value="true" <%= columnInfo.default === true ? 'selected' : '' %>>True</option>
+                                                    <option value="false" <%= columnInfo.default === false ? 'selected' : '' %>>False</option>
                                                 </select>
-                                            <% } else if (columnInfo.type === 'NUMBER') { %>
-                                                <input type="number" class="form-control" id="<%= columnName %>" name="<%= columnName %>" step="any">
+                                            <% } else if (columnInfo.type === 'NUMBER' || columnInfo.type.startsWith('NUMBER')) { %>
+                                                <input type="number" class="form-control" id="<%= columnName %>" name="<%= columnName %>" 
+                                                       step="any" <%= columnInfo.notNull ? 'required' : '' %>
+                                                       <%= columnInfo.default !== undefined ? `value="${columnInfo.default}"` : '' %>
+                                                       placeholder="<%= columnInfo.default !== undefined ? `Default: ${columnInfo.default}` : '' %>">
                                             <% } else if (columnInfo.type === 'TEXT') { %>
-                                                <textarea class="form-control" id="<%= columnName %>" name="<%= columnName %>" rows="3"></textarea>
+                                                <textarea class="form-control" id="<%= columnName %>" name="<%= columnName %>" 
+                                                          rows="3" <%= columnInfo.notNull ? 'required' : '' %>
+                                                          placeholder="<%= columnInfo.default !== undefined ? `Default: ${columnInfo.default}` : '' %>"><%= columnInfo.default !== undefined ? columnInfo.default : '' %></textarea>
                                             <% } else { %>
-                                                <input type="text" class="form-control" id="<%= columnName %>" name="<%= columnName %>">
+                                                <input type="text" class="form-control" id="<%= columnName %>" name="<%= columnName %>"
+                                                       <%= columnInfo.notNull ? 'required' : '' %>
+                                                       <%= columnInfo.default !== undefined ? `value="${columnInfo.default}"` : '' %>
+                                                       placeholder="<%= columnInfo.default !== undefined ? `Default: ${columnInfo.default}` : '' %>">
+                                            <% } %>
+                                            
+                                            <% if (columnInfo.check) { %>
+                                                <div class="form-text">
+                                                    <i class="bi bi-shield-check"></i> Check: <%= columnInfo.check %>
+                                                </div>
+                                            <% } %>
+                                            <% if (columnInfo.foreignKey) { %>
+                                                <div class="form-text">
+                                                    <i class="bi bi-arrow-right"></i> References: <%= columnInfo.foreignKey.references %>
+                                                </div>
                                             <% } %>
                                         </div>
                                     <% }); %>

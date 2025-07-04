@@ -3,7 +3,11 @@ class SQLParser {
     this.keywords = new Set([
       'SELECT', 'FROM', 'WHERE', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET',
       'DELETE', 'CREATE', 'TABLE', 'DROP', 'GROUP', 'BY', 'ORDER', 'LIMIT',
-      'AND', 'OR', 'NOT', 'IN', 'LIKE', 'BETWEEN', 'IS', 'NULL'
+      'AND', 'OR', 'NOT', 'IN', 'LIKE', 'BETWEEN', 'IS', 'NULL',
+      // Advanced table creation keywords
+      'PRIMARY', 'KEY', 'FOREIGN', 'REFERENCES', 'UNIQUE', 'CHECK', 'DEFAULT',
+      'AUTO_INCREMENT', 'AUTOINCREMENT', 'INDEX', 'CONSTRAINT', 'ON', 'BEFORE',
+      'AFTER', 'TRIGGER', 'FOR', 'EACH', 'ROW', 'WHEN', 'BEGIN', 'END'
     ]);
   }
 
@@ -341,6 +345,26 @@ class SQLParser {
       consume(); // (
 
       const schema = {};
+      const options = {
+        indexes: [],
+        triggers: []
+      };
+
+      // Parse column definitions and constraints
+      /* CUSTOMIZATION POINT: ADD NEW COLUMN CONSTRAINT PARSING HERE
+       * This is where you can add support for new column-level constraints.
+       * The current parser supports:
+       * - PRIMARY KEY, UNIQUE, NOT NULL, AUTO_INCREMENT
+       * - FOREIGN KEY REFERENCES table.column
+       * - CHECK constraints
+       * - DEFAULT values
+       * 
+       * To add new constraints:
+       * 1. Add the keyword to the keywords Set above
+       * 2. Add parsing logic in the parseColumnConstraints method below
+       * 3. Update the StorageEngine to handle the new constraint
+       */
+      
       do {
         const columnToken = consume();
         if (columnToken.type !== 'IDENTIFIER') {
@@ -366,7 +390,80 @@ class SQLParser {
           }
         }
 
-        schema[columnName] = { type: columnType };
+        const columnDef = { type: columnType };
+        
+        // Parse column constraints
+        /* CUSTOMIZATION POINT: COLUMN CONSTRAINT PARSING
+         * This section parses individual column constraints.
+         * Add new constraint types here by checking for additional keywords.
+         */
+        while (peek() && peek().type === 'IDENTIFIER' && peek().value !== ',' && peek().type !== 'RPAREN') {
+          const constraintToken = peek();
+          
+          if (constraintToken.value === 'PRIMARY') {
+            consume(); // PRIMARY
+            if (peek() && peek().value === 'KEY') {
+              consume(); // KEY
+              columnDef.primaryKey = true;
+            }
+          } else if (constraintToken.value === 'UNIQUE') {
+            consume(); // UNIQUE
+            columnDef.unique = true;
+          } else if (constraintToken.value === 'NOT') {
+            consume(); // NOT
+            if (peek() && peek().value === 'NULL') {
+              consume(); // NULL
+              columnDef.notNull = true;
+            }
+          } else if (constraintToken.value === 'AUTO_INCREMENT' || constraintToken.value === 'AUTOINCREMENT') {
+            consume();
+            columnDef.autoIncrement = true;
+          } else if (constraintToken.value === 'DEFAULT') {
+            consume(); // DEFAULT
+            const defaultToken = consume();
+            if (defaultToken.type === 'STRING' || defaultToken.type === 'NUMBER' || defaultToken.type === 'IDENTIFIER') {
+              columnDef.default = defaultToken.value;
+            }
+          } else if (constraintToken.value === 'FOREIGN_KEY') {
+            consume(); // FOREIGN_KEY
+            if (peek() && peek().type === 'LPAREN') {
+              consume(); // (
+              const refToken = consume();
+              if (refToken.type === 'IDENTIFIER') {
+                columnDef.foreignKey = {
+                  references: refToken.value,
+                  onDelete: 'RESTRICT',
+                  onUpdate: 'RESTRICT'
+                };
+              }
+              if (peek() && peek().type === 'RPAREN') {
+                consume(); // )
+              }
+            }
+          } else if (constraintToken.value === 'CHECK') {
+            consume(); // CHECK
+            if (peek() && peek().type === 'LPAREN') {
+              consume(); // (
+              // Simple check constraint parsing - collect tokens until )
+              let checkExpression = '';
+              let parenCount = 1;
+              while (parenCount > 0 && current < tokens.length) {
+                const token = consume();
+                if (token.type === 'LPAREN') parenCount++;
+                else if (token.type === 'RPAREN') parenCount--;
+                
+                if (parenCount > 0) {
+                  checkExpression += token.value + ' ';
+                }
+              }
+              columnDef.check = checkExpression.trim();
+            }
+          } else {
+            break; // Unknown constraint, break out
+          }
+        }
+
+        schema[columnName] = columnDef;
 
         if (peek() && peek().type === 'COMMA') {
           consume();
@@ -380,10 +477,19 @@ class SQLParser {
       }
       consume(); // )
 
+      /* CUSTOMIZATION POINT: TABLE-LEVEL CONSTRAINTS
+       * Add parsing for table-level constraints here like:
+       * - CONSTRAINT name PRIMARY KEY (col1, col2)
+       * - FOREIGN KEY (col) REFERENCES table(col)
+       * - CHECK constraints that span multiple columns
+       * - INDEX definitions
+       */
+
       return {
         type: 'CREATE_TABLE',
         table: tableName,
-        schema
+        schema,
+        options
       };
     } else if (peek().value === 'GROUP') {
       consume(); // GROUP
@@ -409,6 +515,65 @@ class SQLParser {
         type: 'CREATE_GROUP',
         table: tableName,
         group: groupName
+      };
+    } else if (peek().value === 'INDEX') {
+      /* CUSTOMIZATION POINT: CREATE INDEX PARSING
+       * Add support for CREATE INDEX statements here:
+       * CREATE INDEX idx_name ON table_name (column1, column2)
+       * CREATE UNIQUE INDEX idx_name ON table_name (column1)
+       */
+      consume(); // INDEX
+      
+      const indexToken = consume();
+      if (indexToken.type !== 'IDENTIFIER') {
+        throw new Error('Expected index name');
+      }
+      const indexName = indexToken.value;
+
+      if (peek().value !== 'ON') {
+        throw new Error('Expected ON after index name');
+      }
+      consume(); // ON
+
+      const tableToken = consume();
+      if (tableToken.type !== 'IDENTIFIER') {
+        throw new Error('Expected table name');
+      }
+      const tableName = tableToken.value;
+
+      if (peek().type !== 'LPAREN') {
+        throw new Error('Expected opening parenthesis for column list');
+      }
+      consume(); // (
+
+      const columns = [];
+      do {
+        const columnToken = consume();
+        if (columnToken.type !== 'IDENTIFIER') {
+          throw new Error('Expected column name');
+        }
+        columns.push(columnToken.value);
+
+        if (peek() && peek().type === 'COMMA') {
+          consume();
+        } else {
+          break;
+        }
+      } while (peek());
+
+      if (peek().type !== 'RPAREN') {
+        throw new Error('Expected closing parenthesis');
+      }
+      consume(); // )
+
+      return {
+        type: 'CREATE_INDEX',
+        table: tableName,
+        index: {
+          name: indexName,
+          columns: columns,
+          unique: false
+        }
       };
     }
 

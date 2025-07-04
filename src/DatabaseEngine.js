@@ -179,9 +179,9 @@ class DatabaseEngine {
   }
 
   async executeCreateTable(ast) {
-    const { table, schema } = ast;
+    const { table, schema, options = {} } = ast;
     
-    const tableInfo = await this.storage.createTable(table, schema);
+    const tableInfo = await this.storage.createTable(table, schema, options);
     
     return {
       success: true,
@@ -302,7 +302,7 @@ class DatabaseEngine {
   }
 
   // Security-validated direct operations
-  async createTableDirect(tableName, schema, metadata = {}) {
+  async createTableDirect(tableName, schema, options = {}, metadata = {}) {
     if (!this.initialized || !this.storage) {
       throw new Error('Database engine not initialized or no database selected');
     }
@@ -318,14 +318,32 @@ class DatabaseEngine {
       throw new Error(`Maximum number of tables (${this.security.options.maxTablesPerDatabase}) exceeded`);
     }
     
-    // Log operation
-    this.security.logSecurityEvent('table_created', {
-      tableName: sanitizedTableName,
-      database: this.currentDatabase,
-      ...metadata
-    });
-    
-    return await this.storage.createTable(sanitizedTableName, schema);
+    try {
+      const result = await this.storage.createTable(sanitizedTableName, schema, options);
+      
+      // Log the action
+      this.security.logSecurityEvent('table_created', {
+        tableName: sanitizedTableName,
+        columnCount: Object.keys(schema).length,
+        hasConstraints: Object.values(schema).some(col => 
+          col.primaryKey || col.unique || col.notNull || col.foreignKey
+        ),
+        ...metadata
+      });
+      
+      return {
+        success: true,
+        message: `Table '${sanitizedTableName}' created successfully`,
+        data: result
+      };
+    } catch (error) {
+      this.security.logSecurityEvent('table_creation_failed', {
+        tableName: sanitizedTableName,
+        error: error.message,
+        ...metadata
+      });
+      throw error;
+    }
   }
 
   async createGroupDirect(tableName, groupName, metadata = {}) {

@@ -138,9 +138,13 @@ class SecurityManager {
       /((\%27)|(\'))\s*((\%6F)|o|(\%4F))((\%72)|r|(\%52))/gi, // OR injection
       /((\%27)|(\'))\s*union/gi,
       /\b(AND|OR)\s+[\d\w]+\s*=\s*[\d\w]+\s*(--|\#)/gi,
-      /\b(SELECT|INSERT|UPDATE|DELETE)\s.*\b(FROM|INTO)\s.*\b(WHERE|SET)\s.*=/gi,
+      // Made this pattern more specific to avoid false positives
+      /\b(SELECT|INSERT|UPDATE|DELETE)\s.*\b(FROM|INTO)\s.*\b(WHERE|SET)\s.*=.*['"][^'"]*['"];?\s*(--|\#|UNION|OR\s+1=1)/gi,
       /\b(LOAD_FILE|INTO\s+OUTFILE|INTO\s+DUMPFILE)\b/gi,
-      /\b(BENCHMARK|SLEEP|USER|VERSION|DATABASE)\s*\(/gi
+      /\b(BENCHMARK|SLEEP|USER|VERSION|DATABASE)\s*\(/gi,
+      // Detect obvious injection attempts
+      /('|")\s*(OR|AND)\s+('|")?1('|")?=('|")?1/gi,
+      /(;|\||\||&)\s*(DROP|DELETE|INSERT|UPDATE|CREATE)\s/gi
     ];
 
     for (const pattern of suspiciousPatterns) {
@@ -268,7 +272,18 @@ class SecurityManager {
     return true;
   }
 
-  validateColumnType(columnType) {
+  validateColumnType(columnDefinition) {
+    // Handle both string and object column definitions
+    let columnType;
+    
+    if (typeof columnDefinition === 'string') {
+      columnType = columnDefinition;
+    } else if (typeof columnDefinition === 'object' && columnDefinition.type) {
+      columnType = columnDefinition.type;
+    } else {
+      throw new Error('Column definition must be a string or object with type property');
+    }
+    
     if (typeof columnType !== 'string') {
       throw new Error('Column type must be a string');
     }

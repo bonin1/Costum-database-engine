@@ -47,6 +47,10 @@ program
         }
 
         // Database management commands
+        /* CUSTOMIZATION POINT: DATABASE COMMANDS
+         * Add new database management commands here.
+         * Follow the pattern: check command, validate, execute, continue
+         */
         if (command.toLowerCase() === 'show databases') {
           await showDatabases();
           continue;
@@ -70,6 +74,11 @@ program
           continue;
         }
 
+        // Table management commands
+        /* CUSTOMIZATION POINT: TABLE COMMANDS
+         * Add new table management commands here.
+         * Examples: ALTER TABLE, CREATE INDEX, etc.
+         */
         if (command.toLowerCase() === 'show tables') {
           await showTables();
           continue;
@@ -81,14 +90,45 @@ program
           continue;
         }
 
+        if (command.toLowerCase().startsWith('show indexes ')) {
+          const tableName = command.substring(13).trim();
+          await showIndexes(tableName);
+          continue;
+        }
+
+        if (command.toLowerCase().startsWith('show constraints ')) {
+          const tableName = command.substring(17).trim();
+          await showConstraints(tableName);
+          continue;
+        }
+
+        // Security and monitoring commands  
+        /* CUSTOMIZATION POINT: SECURITY COMMANDS
+         * Add new security and monitoring commands here.
+         */
         if (command.toLowerCase() === 'security report') {
           await showSecurityReport();
           continue;
         }
 
+        // Group management commands
+        /* CUSTOMIZATION POINT: GROUP COMMANDS
+         * Add new group management commands here.
+         */
         if (command.toLowerCase().startsWith('show groups ')) {
           const tableName = command.substring(12).trim();
           await showGroups(tableName);
+          continue;
+        }
+
+        // Advanced CREATE TABLE command with constraints
+        /* CUSTOMIZATION POINT: ADVANCED CREATE COMMANDS
+         * This is where you can add parsing for advanced CREATE TABLE syntax.
+         * The current implementation supports SQL parsing, but you can add
+         * interactive prompts for easier table creation.
+         */
+        if (command.toLowerCase().startsWith('create table ')) {
+          await handleAdvancedCreateTable(command);
           continue;
         }
 
@@ -312,6 +352,24 @@ async function createSampleData() {
   await db.executeQuery("INSERT INTO products GROUP books (name, price, category) VALUES ('Database Design', 49.99, 'Books')");
 }
 
+/* 
+ * CUSTOMIZATION POINT: CLI COMMAND PARSING
+ * 
+ * This section handles interactive CLI commands. To add new commands:
+ * 
+ * 1. Add command parsing logic in the interactive command loop below
+ * 2. Create a new function to handle the command (see examples below)
+ * 3. Add the command to the help system (see showHelp function)
+ * 4. For SQL commands, enhance the SQLParser in src/parser/SQLParser.js
+ * 
+ * Examples of custom commands you can add:
+ * - CREATE INDEX commands
+ * - ALTER TABLE commands  
+ * - BACKUP/RESTORE commands
+ * - Performance analysis commands
+ * - Custom data import/export commands
+ */
+
 // Database management functions
 async function showDatabases() {
   try {
@@ -402,30 +460,59 @@ async function showSecurityReport() {
 
 function showHelp() {
   console.log(chalk.green('\n📚 Available Commands:'));
+  
   console.log(chalk.blue('  Database Management:'));
   console.log(chalk.white('    show databases       - List all databases'));
   console.log(chalk.white('    use <database>       - Switch to database'));
   console.log(chalk.white('    create database <n>  - Create new database'));
   console.log(chalk.white('    drop database <n>    - Delete database (with confirmation)'));
-  console.log(chalk.blue('  SQL Commands:'));
-  console.log(chalk.white('    CREATE TABLE <n> (col1 type1, col2 type2, ...)'));
+  
+  console.log(chalk.blue('  Table Management:'));
+  console.log(chalk.white('    show tables          - List all tables'));
+  console.log(chalk.white('    describe <table>     - Show table structure and data'));
+  console.log(chalk.white('    show indexes <table> - Show indexes for table'));
+  console.log(chalk.white('    show constraints <t> - Show constraints for table'));
+  console.log(chalk.white('    show groups <table>  - Show groups in table'));
+  
+  console.log(chalk.blue('  Advanced SQL Commands:'));
+  console.log(chalk.white('    CREATE TABLE <name> ('));
+  console.log(chalk.white('      column1 TYPE [PRIMARY KEY] [UNIQUE] [NOT NULL],'));
+  console.log(chalk.white('      column2 TYPE [AUTO_INCREMENT] [DEFAULT value],'));
+  console.log(chalk.white('      column3 TYPE [FOREIGN_KEY(table.column)],'));
+  console.log(chalk.white('      column4 TYPE [CHECK($value > 0)]'));
+  console.log(chalk.white('    )'));
   console.log(chalk.white('    CREATE GROUP <group> IN <table>'));
+  console.log(chalk.white('    CREATE INDEX <name> ON <table> (columns)'));
   console.log(chalk.white('    INSERT INTO <table> [GROUP <group>] [(columns)] VALUES (values)'));
   console.log(chalk.white('    SELECT * FROM <table> [GROUP <group>] [WHERE conditions]'));
-  console.log(chalk.blue('\n  Special Commands:'));
-  console.log(chalk.white('    help                 - Show this help'));
-  console.log(chalk.white('    show tables          - List all tables'));
-  console.log(chalk.white('    describe <table>     - Show table details'));
-  console.log(chalk.white('    show groups <table>  - Show groups in table'));
+  
+  console.log(chalk.blue('  Security & Monitoring:'));
   console.log(chalk.white('    security report      - Show security report'));
+  
+  console.log(chalk.blue('  System Commands:'));
+  console.log(chalk.white('    help                 - Show this help'));
   console.log(chalk.white('    exit                 - Exit the CLI'));
-  console.log(chalk.blue('\n  Examples:'));
-  console.log(chalk.gray('    create database testdb'));
-  console.log(chalk.gray('    use testdb'));
-  console.log(chalk.gray('    CREATE TABLE users (name VARCHAR(255), age NUMBER)'));
-  console.log(chalk.gray('    CREATE GROUP admins IN users'));
-  console.log(chalk.gray('    INSERT INTO users GROUP admins (name, age) VALUES (\'John\', 30)'));
-  console.log(chalk.gray('    SELECT * FROM users GROUP admins'));
+  
+  console.log(chalk.blue('\n  💡 Advanced Table Creation Examples:'));
+  console.log(chalk.gray('    CREATE TABLE users ('));
+  console.log(chalk.gray('      id NUMBER PRIMARY KEY AUTO_INCREMENT,'));
+  console.log(chalk.gray('      username VARCHAR(50) UNIQUE NOT NULL,'));
+  console.log(chalk.gray('      email VARCHAR(255) UNIQUE NOT NULL,'));
+  console.log(chalk.gray('      age NUMBER CHECK($value >= 0),'));
+  console.log(chalk.gray('      active BOOLEAN DEFAULT true'));
+  console.log(chalk.gray('    )'));
+  console.log();
+  console.log(chalk.gray('    CREATE TABLE orders ('));
+  console.log(chalk.gray('      id NUMBER PRIMARY KEY AUTO_INCREMENT,'));
+  console.log(chalk.gray('      user_id NUMBER FOREIGN_KEY(users.id),'));
+  console.log(chalk.gray('      total NUMBER CHECK($value >= 0)'));
+  console.log(chalk.gray('    )'));
+  
+  console.log(chalk.blue('\n  🔧 Customization Notes:'));
+  console.log(chalk.yellow('    • Add new commands in the interactive loop (src/cli.js)'));
+  console.log(chalk.yellow('    • Extend SQL parsing in src/parser/SQLParser.js'));
+  console.log(chalk.yellow('    • Add new storage features in src/storage/StorageEngine.js'));
+  console.log(chalk.yellow('    • Look for "CUSTOMIZATION POINT" comments in the code'));
   console.log('');
 }
 
@@ -435,3 +522,119 @@ if (require.main === module) {
 }
 
 module.exports = { db };
+
+// NEW CLI FUNCTIONS FOR ADVANCED FEATURES
+/* CUSTOMIZATION POINT: NEW CLI FUNCTIONS
+ * Add new CLI functions here to support advanced database features.
+ * Follow the existing patterns for error handling and output formatting.
+ */
+
+async function showIndexes(tableName) {
+  try {
+    const tables = await db.getAllTables();
+    if (!tables[tableName]) {
+      console.log(chalk.red(`Table '${tableName}' does not exist.`));
+      return;
+    }
+    
+    const tableInfo = tables[tableName];
+    const indexes = tableInfo.indexes || [];
+    
+    if (indexes.length === 0) {
+      console.log(chalk.yellow(`No indexes found for table '${tableName}'.`));
+      return;
+    }
+    
+    console.log(chalk.green(`\n📊 Indexes for table '${tableName}':`));
+    indexes.forEach(index => {
+      const uniqueText = index.unique ? ' (UNIQUE)' : '';
+      console.log(chalk.blue(`  • ${index.name}`) + chalk.gray(` on (${index.columns.join(', ')})${uniqueText}`));
+    });
+    console.log();
+  } catch (error) {
+    console.log(chalk.red(`Error: ${error.message}`));
+  }
+}
+
+async function showConstraints(tableName) {
+  try {
+    const tables = await db.getAllTables();
+    if (!tables[tableName]) {
+      console.log(chalk.red(`Table '${tableName}' does not exist.`));
+      return;
+    }
+    
+    const tableInfo = tables[tableName];
+    const constraints = tableInfo.constraints || {};
+    
+    console.log(chalk.green(`\n🔒 Constraints for table '${tableName}':`));
+    
+    // Primary Key
+    if (constraints.primaryKey) {
+      console.log(chalk.blue(`  Primary Key: ${constraints.primaryKey}`));
+    }
+    
+    // Unique constraints
+    if (constraints.unique && constraints.unique.length > 0) {
+      console.log(chalk.blue(`  Unique: ${constraints.unique.join(', ')}`));
+    }
+    
+    // Not Null constraints
+    if (constraints.notNull && constraints.notNull.length > 0) {
+      console.log(chalk.blue(`  Not Null: ${constraints.notNull.join(', ')}`));
+    }
+    
+    // Check constraints
+    if (constraints.check && constraints.check.length > 0) {
+      console.log(chalk.blue(`  Check Constraints:`));
+      constraints.check.forEach(check => {
+        console.log(chalk.gray(`    ${check.column}: ${check.condition}`));
+      });
+    }
+    
+    // Foreign Keys
+    if (tableInfo.foreignKeys && tableInfo.foreignKeys.length > 0) {
+      console.log(chalk.blue(`  Foreign Keys:`));
+      tableInfo.foreignKeys.forEach(fk => {
+        console.log(chalk.gray(`    ${fk.column} → ${fk.references} (${fk.onDelete}/${fk.onUpdate})`));
+      });
+    }
+    
+    // Auto-increment columns
+    if (tableInfo.autoIncrement && Object.keys(tableInfo.autoIncrement).length > 0) {
+      console.log(chalk.blue(`  Auto Increment: ${Object.keys(tableInfo.autoIncrement).join(', ')}`));
+    }
+    
+    console.log();
+  } catch (error) {
+    console.log(chalk.red(`Error: ${error.message}`));
+  }
+}
+
+async function handleAdvancedCreateTable(command) {
+  /* CUSTOMIZATION POINT: ADVANCED CREATE TABLE PARSING
+   * This function handles advanced CREATE TABLE commands.
+   * You can modify this to add more sophisticated parsing
+   * or interactive prompts for table creation.
+   */
+  try {
+    // Extract everything after "create table "
+    const sqlCommand = command.substring(0, 12) + command.substring(12);
+    
+    console.log(chalk.blue('Parsing advanced CREATE TABLE command...'));
+    await executeSQL(sqlCommand);
+    
+    // Show examples of advanced syntax
+    console.log(chalk.green('\n💡 Advanced CREATE TABLE syntax examples:'));
+    console.log(chalk.gray('CREATE TABLE users ('));
+    console.log(chalk.gray('  id NUMBER PRIMARY KEY AUTO_INCREMENT,'));
+    console.log(chalk.gray('  username VARCHAR(50) UNIQUE NOT NULL,'));
+    console.log(chalk.gray('  email VARCHAR(255) UNIQUE NOT NULL,'));
+    console.log(chalk.gray('  age NUMBER CHECK($value >= 0),'));
+    console.log(chalk.gray('  active BOOLEAN DEFAULT true'));
+    console.log(chalk.gray(');'));
+    console.log();
+  } catch (error) {
+    console.log(chalk.red(`Error: ${error.message}`));
+  }
+}

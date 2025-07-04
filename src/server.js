@@ -114,21 +114,138 @@ app.get('/create-table', async (req, res) => {
 app.post('/create-table', async (req, res) => {
   try {
     await ensureDbInitialized();
-    const { tableName, columns } = req.body;
+    const { 
+      tableName, 
+      columnNames = [],
+      columnTypes = [],
+      columnLengths = [],
+      primaryKey = [],
+      notNull = [],
+      unique = [],
+      autoIncrement = [],
+      defaultValues = [],
+      foreignKeys = [],
+      checkConstraints = [],
+      indexes = '',
+      triggers = ''
+    } = req.body;
     
-    if (!tableName || !columns) {
-      throw new Error('Table name and columns are required');
+    if (!tableName || !columnNames.length) {
+      throw new Error('Table name and at least one column are required');
     }
     
+    // Build schema object with advanced features
     const schema = {};
-    columns.split(',').forEach(col => {
-      const [name, type] = col.trim().split(':');
-      if (name && type) {
-        schema[name.trim()] = type.trim();
-      }
-    });
+    const options = {
+      indexes: [],
+      triggers: []
+    };
     
-    await db.createTableDirect(tableName, schema, {
+    // Process each column
+    for (let i = 0; i < columnNames.length; i++) {
+      const columnName = columnNames[i];
+      if (!columnName) continue;
+      
+      const columnDef = {
+        type: columnTypes[i] || 'VARCHAR'
+      };
+      
+      // Add length if specified and type supports it
+      if (columnLengths[i] && ['VARCHAR', 'TEXT'].includes(columnDef.type)) {
+        columnDef.type = `${columnDef.type}(${columnLengths[i]})`;
+      }
+      
+      // Add constraints
+      if (primaryKey.includes(i.toString())) {
+        columnDef.primaryKey = true;
+      }
+      
+      if (notNull.includes(i.toString())) {
+        columnDef.notNull = true;
+      }
+      
+      if (unique.includes(i.toString())) {
+        columnDef.unique = true;
+      }
+      
+      if (autoIncrement.includes(i.toString())) {
+        columnDef.autoIncrement = true;
+      }
+      
+      // Add default value
+      if (defaultValues[i] && defaultValues[i].trim()) {
+        let defaultValue = defaultValues[i].trim();
+        // Parse boolean and numeric defaults
+        if (defaultValue.toLowerCase() === 'true') {
+          defaultValue = true;
+        } else if (defaultValue.toLowerCase() === 'false') {
+          defaultValue = false;
+        } else if (!isNaN(defaultValue) && !isNaN(parseFloat(defaultValue))) {
+          defaultValue = parseFloat(defaultValue);
+        }
+        columnDef.default = defaultValue;
+      }
+      
+      // Add foreign key constraint
+      if (foreignKeys[i] && foreignKeys[i].trim()) {
+        const fkParts = foreignKeys[i].trim().split('.');
+        if (fkParts.length === 2) {
+          columnDef.foreignKey = {
+            references: foreignKeys[i].trim(),
+            onDelete: 'RESTRICT',
+            onUpdate: 'RESTRICT'
+          };
+        }
+      }
+      
+      // Add check constraint
+      if (checkConstraints[i] && checkConstraints[i].trim()) {
+        columnDef.check = checkConstraints[i].trim();
+      }
+      
+      schema[columnName] = columnDef;
+    }
+    
+    // Process indexes
+    if (indexes && indexes.trim()) {
+      const indexLines = indexes.trim().split('\n');
+      for (const line of indexLines) {
+        if (line.trim()) {
+          const isUnique = line.includes('UNIQUE');
+          const columnsStr = line.replace('UNIQUE', '').trim();
+          const columns = columnsStr.split(',').map(col => col.trim());
+          
+          if (columns.length > 0 && columns[0]) {
+            options.indexes.push({
+              name: `idx_${columns.join('_')}`,
+              columns: columns,
+              unique: isUnique
+            });
+          }
+        }
+      }
+    }
+    
+    // Process triggers
+    if (triggers && triggers.trim()) {
+      const triggerLines = triggers.trim().split('\n');
+      for (const line of triggerLines) {
+        if (line.trim() && line.includes(':')) {
+          const [timing_event, action] = line.split(':');
+          const parts = timing_event.trim().split(' ');
+          if (parts.length >= 2) {
+            options.triggers.push({
+              name: `trigger_${Date.now()}`,
+              timing: parts[0],
+              event: parts[1],
+              action: action.trim()
+            });
+          }
+        }
+      }
+    }
+    
+    await db.createTableDirect(tableName, schema, options, {
       ip: req.ip,
       userAgent: req.get('User-Agent')
     });

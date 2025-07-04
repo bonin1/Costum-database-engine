@@ -25,6 +25,23 @@
           "rowCount": 1
         }
       }
+    },
+    "boin": {
+      "name": "boin",
+      "schema": {
+        "name": {
+          "type": "VARCHAR(255)"
+        },
+        "email": {
+          "type": "VARCHAR(255)"
+        },
+        "age": {
+          "type": "NUMBER"
+        }
+      },
+      "created": "2025-07-04T19:15:38.582Z",
+      "rowCount": 0,
+      "groups": {}
     }
   },
   "indexes": {},
