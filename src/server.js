@@ -175,7 +175,6 @@ app.post('/create-table', async (req, res) => {
       // Add default value
       if (defaultValues[i] && defaultValues[i].trim()) {
         let defaultValue = defaultValues[i].trim();
-        // Parse boolean and numeric defaults
         if (defaultValue.toLowerCase() === 'true') {
           defaultValue = true;
         } else if (defaultValue.toLowerCase() === 'false') {
