@@ -181,7 +181,6 @@ app.post('/create-table', async (req, res) => {
         columnDef.default = defaultValue;
       }
       
-      // Add foreign key constraint
       if (foreignKeys[i] && foreignKeys[i].trim()) {
         const fkParts = foreignKeys[i].trim().split('.');
         if (fkParts.length === 2) {
