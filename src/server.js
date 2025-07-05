@@ -140,7 +140,6 @@ app.post('/create-table', async (req, res) => {
       triggers: []
     };
     
-    // Process each column
     for (let i = 0; i < columnNames.length; i++) {
       const columnName = columnNames[i];
       if (!columnName) continue;
