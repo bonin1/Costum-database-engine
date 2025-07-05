@@ -148,7 +148,6 @@ app.post('/create-table', async (req, res) => {
         type: columnTypes[i] || 'VARCHAR'
       };
       
-      // Add length if specified and type supports it
       if (columnLengths[i] && ['VARCHAR', 'TEXT'].includes(columnDef.type)) {
         columnDef.type = `${columnDef.type}(${columnLengths[i]})`;
       }
