@@ -169,7 +169,6 @@ app.post('/create-table', async (req, res) => {
         columnDef.autoIncrement = true;
       }
       
-      // Add default value
       if (defaultValues[i] && defaultValues[i].trim()) {
         let defaultValue = defaultValues[i].trim();
         if (defaultValue.toLowerCase() === 'true') {
