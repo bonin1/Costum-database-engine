@@ -134,7 +134,6 @@ app.post('/create-table', async (req, res) => {
       throw new Error('Table name and at least one column are required');
     }
     
-    // Build schema object with advanced features
     const schema = {};
     const options = {
       indexes: [],
