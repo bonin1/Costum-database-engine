@@ -192,7 +192,6 @@ app.post('/create-table', async (req, res) => {
         }
       }
       
-      // Add check constraint
       if (checkConstraints[i] && checkConstraints[i].trim()) {
         columnDef.check = checkConstraints[i].trim();
       }
